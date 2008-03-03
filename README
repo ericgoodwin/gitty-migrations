@@ -1,0 +1,33 @@
+SmartMigrations
+===============
+
+Requires a extended 'rubygit' gem that has stashes
+cd vendor/plugins/smart_migrations/extended_rubygit_gem
+sudo gem install git-1.0.5
+
+Example
+=======
+
+class MyMigration < ActiveRecord::Migration
+  
+	# Would be better if you used a git-tag to tag the revision
+  use_git_revision "675bacdd870a098a98aa3f858d92e1047ba28a7d"
+
+  def self.up
+    puts "This is a test migration"
+  end
+
+  def self.down
+    
+  end
+  
+end
+
+TODO
+===============
+
+* Check for the revision where the migration was checked in or last edited and 
+	automatically use that revision if no revision has been specified
+	
+	
+Copyright (c) 2008 Eric Goodwin, released under the MIT license
