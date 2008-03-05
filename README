@@ -28,6 +28,7 @@ TODO
 
 * Check for the revision where the migration was checked in or last edited and 
 	automatically use that revision if no revision has been specified
+* If there are no stashes then clear the stash when we are done with the migrations
 	
 	
 Copyright (c) 2008 Eric Goodwin, released under the MIT license
