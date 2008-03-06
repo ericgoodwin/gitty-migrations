@@ -1,4 +1,4 @@
-module SmartMigration
+module GittyMigration
   
   def self.included(base)
     base.extend ClassMethods
@@ -11,32 +11,36 @@ module SmartMigration
   
   module ClassMethods
     
-    @@smart_migration ||= {}
-    @@smart_migration[:run] = false
+    @@gitty_migration ||= {}
+    @@gitty_migration[:enabled] = false
         
     def use_git_revision(revision_name)
       g = Git.open("#{RAILS_ROOT}")
       raise "Couldn't find the .git directory. Does this project use git?" if g.nil?
-      @@smart_migration[:run] = true
-      @@smart_migration[:stash] = (g.status.changed.size > 0) ? true : false
-      @@smart_migration[:git] = g
-      @@smart_migration[:branch] = "smart_migration_".concat Digest::MD5.hexdigest("#{Time.now}-#{revision_name}")
-      @@smart_migration[:revision] = revision_name
-      @@smart_migration[:original_branch] = @@smart_migration[:git].branch.name
+      
+      # TODO
+      # See if there are any stashes already. If there arent' then set a flag to clear the stash after we are done.
+      @@gitty_migration[:enabled] = true
+      @@gitty_migration[:stash] = (g.status.changed.size > 0) ? true : false
+      @@gitty_migration[:clear_stash] = (g.branch.stashes.size > 0) ? true : false
+      @@gitty_migration[:git] = g
+      @@gitty_migration[:branch] = "smart_migration_".concat Digest::MD5.hexdigest("#{Time.now}-#{revision_name}")
+      @@gitty_migration[:revision] = revision_name
+      @@gitty_migration[:original_branch] = @@gitty_migration[:git].branch.name
     end
 
     def migrate_with_git(direction)
-      before_migrate if @@smart_migration[:run] == true
+      before_migrate if @@gitty_migration[:enabled] == true
       migrate_without_git(direction)
-      after_migrate if @@smart_migration[:run] == true
+      after_migrate if @@gitty_migration[:enabled] == true
     end
 
     def before_migrate
-      m = @@smart_migration
-      if m[:run]
+      m = @@gitty_migration
+      if m[:enabled]
         say "Migrating with git revision #{m[:revision]}"
         g = m[:git]
-        g.branch(m[:original_branch]).stashes.save(m[:revision]) if @@smart_migration[:stash]
+        g.branch(m[:original_branch]).stashes.save(m[:revision]) if @@gitty_migration[:stash]
         g.branch(m[:branch]).checkout
         commit = g.gcommit("#{m[:revision]}")
 
@@ -57,16 +61,16 @@ module SmartMigration
     end
 
     def revert_to_original
-      m = @@smart_migration
-      if m[:run]
+      m = @@gitty_migration
+      if m[:enabled]
         say "Done migration. Switching back to your normal branch"
-        g = @@smart_migration[:git]
+        g = @@gitty_migration[:git]
         g.branch(m[:original_branch]).checkout
-        g.branch(m[:original_branch]).stashes.apply if @@smart_migration[:stash]
+        g.branch(m[:original_branch]).stashes.apply if @@gitty_migration[:stash]
         g.branch(m[:branch]).delete
         # If we've already deleted the branch, then don't revert again
         # revert_to_original will be called in the after migrate even if we couldn't find the commit
-        @@smart_migration[:run] = false
+        @@gitty_migration[:enabled] = false
       end
     end
     

@@ -1,3 +1,3 @@
 require 'git'
-require 'smart_migration'
-ActiveRecord::Migration.send(:include, SmartMigration)
+require 'gitty_migration'
+ActiveRecord::Migration.send(:include, GittyMigration)
