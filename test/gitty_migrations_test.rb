@@ -1,6 +1,6 @@
 require 'test/unit'
 
-class SmartMigrationsTest < Test::Unit::TestCase
+class GittyMigrationsTest < Test::Unit::TestCase
   # Replace this with your real tests.
   def test_this_plugin
     flunk
