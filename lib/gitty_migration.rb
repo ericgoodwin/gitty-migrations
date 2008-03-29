@@ -1,3 +1,22 @@
+module ActiveRecord
+  class Migrator
+    def migrate
+      migration_classes.each do |migration_class|
+        if reached_target_version?(migration_class.version)
+          Base.logger.info("Reached target version: #{@target_version}")
+          break
+        end
+
+        next if irrelevant_migration?(migration_class.version)
+        
+        Base.logger.info "Migrating to #{migration_class} (#{migration_class.version})"
+        migration_class.migrate(@direction, migration_class.version)
+        set_schema_version(migration_class.version)
+      end
+    end
+  end
+end
+
 module GittyMigration
   
   def self.included(base)
@@ -14,10 +33,16 @@ module GittyMigration
     @@gitty_migration ||= {}
     @@gitty_migration[:enabled] = false
         
-    def use_git_revision(revision_name)
+    def use_git_revision(revision_name=nil)
       g = Git.open("#{RAILS_ROOT}")
       raise "Couldn't find the .git directory. Does this project use git?" if g.nil?
       
+      # commit = git.log(1000).object("db/migrate/100.rb").each{|c|c}.reverse.first
+      # commit.author.name
+      # commit.author.email
+      # commit.message
+      # commit.sha
+      # 
       # TODO
       # See if there are any stashes already. If there arent' then set a flag to clear the stash after we are done.
       @@gitty_migration[:enabled] = true
@@ -29,7 +54,17 @@ module GittyMigration
       @@gitty_migration[:original_branch] = @@gitty_migration[:git].branch.name
     end
 
-    def migrate_with_git(direction)
+    def migrate_with_git(direction, migration_version)
+
+      filename = "#{migration_version}_#{self.to_s.underscore}.rb"
+      file = Dir["db/migrate/0*#{filename}"].first
+      commit = @@gitty_migration[:git].log(1000).object(file).each{|c|c}.reverse.first
+      puts commit.author.name
+      puts commit.author.email
+      puts commit.author.date.to_s
+      puts commit.sha
+      @@gitty_migration[:revision] = commit.sha
+      
       before_migrate if @@gitty_migration[:enabled] == true
       migrate_without_git(direction)
       after_migrate if @@gitty_migration[:enabled] == true
