@@ -6,9 +6,7 @@ module ActiveRecord
           Base.logger.info("Reached target version: #{@target_version}")
           break
         end
-
         next if irrelevant_migration?(migration_class.version)
-        
         Base.logger.info "Migrating to #{migration_class} (#{migration_class.version})"
         migration_class.migrate(@direction, migration_class.version)
         set_schema_version(migration_class.version)
@@ -36,45 +34,42 @@ module GittyMigration
     def use_git_revision(revision_name=nil)
       g = Git.open("#{RAILS_ROOT}")
       raise "Couldn't find the .git directory. Does this project use git?" if g.nil?
-      
-      # commit = git.log(1000).object("db/migrate/100.rb").each{|c|c}.reverse.first
-      # commit.author.name
-      # commit.author.email
-      # commit.message
-      # commit.sha
-      # 
+  
       # TODO
       # See if there are any stashes already. If there arent' then set a flag to clear the stash after we are done.
+      @@gitty_migration[:git] = g
       @@gitty_migration[:enabled] = true
       @@gitty_migration[:stash] = (g.status.changed.size > 0) ? true : false
       @@gitty_migration[:clear_stash] = (g.branch.stashes.size > 0) ? true : false
-      @@gitty_migration[:git] = g
       @@gitty_migration[:branch] = "smart_migration_".concat Digest::MD5.hexdigest("#{Time.now}-#{revision_name}")
       @@gitty_migration[:revision] = revision_name
-      @@gitty_migration[:original_branch] = @@gitty_migration[:git].branch.name
+      @@gitty_migration[:original_branch] = g.branch.name
     end
 
-    def migrate_with_git(direction, migration_version)
-
-      filename = "#{migration_version}_#{self.to_s.underscore}.rb"
-      file = Dir["db/migrate/0*#{filename}"].first
-      commit = @@gitty_migration[:git].log(1000).object(file).each{|c|c}.reverse.first
-      puts commit.author.name
-      puts commit.author.email
-      puts commit.author.date.to_s
-      puts commit.sha
-      @@gitty_migration[:revision] = commit.sha
-      
-      before_migrate if @@gitty_migration[:enabled] == true
+    def migrate_with_git(direction, migration_version)      
+      before_migrate(migration_version) if @@gitty_migration[:enabled] == true
       migrate_without_git(direction)
       after_migrate if @@gitty_migration[:enabled] == true
     end
 
-    def before_migrate
+    def before_migrate(migration_version)
       m = @@gitty_migration
       if m[:enabled]
-        say "Migrating with git revision #{m[:revision]}"
         g = m[:git]
+        
+        if m[:revision].nil?
+          filename = "#{migration_version}_#{self.to_s.underscore}.rb"
+          file = Dir["db/migrate/0*#{filename}"].first
+          commit = g.log(1000).object(file).each{|c|c}.reverse.first
+          #puts commit.author.name
+          #puts commit.author.email
+          #puts commit.author.date.to_s
+          #puts commit.sha
+          @@gitty_migration[:revision] = commit.sha
+        end
+        
+        say "Migrating with git revision #{m[:revision]}"
+        
         g.branch(m[:original_branch]).stashes.save(m[:revision]) if @@gitty_migration[:stash]
         g.branch(m[:branch]).checkout
         commit = g.gcommit("#{m[:revision]}")
@@ -102,6 +97,7 @@ module GittyMigration
         g = @@gitty_migration[:git]
         g.branch(m[:original_branch]).checkout
         g.branch(m[:original_branch]).stashes.apply if @@gitty_migration[:stash]
+        # g.branch(m[:original_branch]).stashes.clear if @@gitty_migration[:clear_stash]
         g.branch(m[:branch]).delete
         # If we've already deleted the branch, then don't revert again
         # revert_to_original will be called in the after migrate even if we couldn't find the commit

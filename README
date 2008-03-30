@@ -11,7 +11,10 @@ Example
 class MyMigration < ActiveRecord::Migration
   
 	# Would be better if you used a git-tag to tag the revision
-  use_git_revision "675bacdd870a098a98aa3f858d92e1047ba28a7d"
+	# You now don't have to put in a sha1 hash. If you don't it will take the migration that you migration was checked in on
+  use_git_revision
+	# or
+	# use_git_revision "675bacdd870a098a98aa3f858d92e1047ba28a7d" # if you want to be explicit
 
   def self.up
     puts "This is a test migration"
@@ -26,7 +29,7 @@ end
 TODO
 ===============
 
-* Check for the revision where the migration was checked in or last edited and 
+√  Check for the revision where the migration was checked in or last edited and 
 	automatically use that revision if no revision has been specified
 * If there are no stashes then clear the stash when we are done with the migrations
 	
