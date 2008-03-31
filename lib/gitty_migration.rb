@@ -23,7 +23,8 @@ module GittyMigration
   
   module ClassMethods
         
-    def git_fu
+    def use_git(options={})
+      @@options = options
       class_eval do
         class << self
           alias_method_chain :migrate, :git
@@ -34,7 +35,8 @@ module GittyMigration
     def migrate_with_git(direction, version)
       settings = MigrationSettings.new(
         :version => version,
-        :klass => self.to_s.underscore
+        :klass => self.to_s.underscore,
+        :revision => @@options[:revision]
       )
       before_migrate(settings) 
       migrate_without_git(direction)
@@ -42,18 +44,21 @@ module GittyMigration
     end
 
     def before_migrate(settings)
-      g = settings.git
-      # Find the commit that matches your sha1
-      commit = g.gcommit("#{settings.revision}")
-      # If we can't find the commit, continue without using gitty migrations
-      if commit.nil?
-        say "Could not find git sha1 that matches '#{settings.revision}'. The migration will continue without git_fu"
-      else
+      begin
+        g = settings.git
+        # Find the commit that matches your sha1
+        commit = g.gcommit("#{settings.revision}")
+        # Will throw an error if the commit isn't known. Bit of a hack :(
+        commit.gtree
+        
         say "Migrating with git"
         say "SHA1: #{settings.revision}"
         say "AUTHOR: #{settings.revision_author}"
         say "DATE: #{settings.revision_date}"
         say "MESSAGE: #{settings.revision_message}"
+      rescue
+        say "WARNING => Could not find git sha1 that matches '#{settings.revision}'. The migration will continue without gitty migrations"
+      else
         # Stash any changes that you may have in your current branch
         g.branch(settings.original_branch).stashes.save(settings.revision) if settings.stash?
         # Checkout a new branch to use for your migration

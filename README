@@ -10,7 +10,11 @@ Example
 
 class MyMigration < ActiveRecord::Migration
   
-  git_fu
+	# Will rollback to the commit that this file was checked in on
+  use_git
+ 
+	# Will rollback to a certain commit that you define
+	# use_git :revision => "2024589c214b41c8b29bcd6444c2d49807760a5a"
 
   def self.up
     puts "This is a test migration"

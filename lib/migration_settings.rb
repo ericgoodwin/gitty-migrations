@@ -24,6 +24,8 @@ class MigrationSettings
       @revision = commit.sha
     end
     @revision
+  rescue
+    @revision = nil
   end
   
   def stash?
