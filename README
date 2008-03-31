@@ -2,7 +2,7 @@ GittyMigrations
 ===============
 
 Requires a extended 'rubygit' gem that has stashes
-cd vendor/plugins/smart_migrations/extended_rubygit_gem
+cd vendor/plugins/gitty_migrations/extended_rubygit_gem
 sudo gem install git-1.0.5
 
 Example
@@ -10,11 +10,7 @@ Example
 
 class MyMigration < ActiveRecord::Migration
   
-	# Would be better if you used a git-tag to tag the revision
-	# You now don't have to put in a sha1 hash. If you don't it will take the migration that you migration was checked in on
-  use_git_revision
-	# or
-	# use_git_revision "675bacdd870a098a98aa3f858d92e1047ba28a7d" # if you want to be explicit
+  git_fu
 
   def self.up
     puts "This is a test migration"
